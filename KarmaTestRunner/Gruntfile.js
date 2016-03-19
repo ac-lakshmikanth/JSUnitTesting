@@ -5,7 +5,7 @@ module.exports = function (grunt) {
 				options: {
 					configFile: "karma.conf.js",
 					port: 9999,
-					singleRun: true,
+					singleRun: false,
 					logLevel: 'ERROR'
 				}
 			},
