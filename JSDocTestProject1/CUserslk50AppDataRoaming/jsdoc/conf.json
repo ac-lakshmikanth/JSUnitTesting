@@ -1,0 +1,45 @@
+{  
+  "source": {
+	"include": ["./jsdoc1","./jsdoc2","./jsdoc3"],
+	"exclude": [],
+	"includePattern": ".js||.jsdoc",
+	"excludePattern": ""
+  },
+  "opts": {
+	"template": "templates/default",
+	"encoding": "utf8",
+	"destination": "./",
+	"recurse": true,
+	"tutorials": "./jsdoc_tutorials",
+	"package": "./jsdoc_project/package.json",
+	"readme": "./jsdoc_project/README.md"
+  },
+  "plugins": [
+	"plugins/markdown",
+	"plugins/summarize",
+	"plugins/test_plugin1"
+  ],
+  "markdown": { 
+	"tags": ["param1"],
+    "excludeTags": [],
+    "hardwrap": true,
+	"idInHeadings": true
+  },
+  "templates": {
+	"default": {
+		"outputSourceFiles": true,
+		"includeDate": true,
+		"useLongnameInNav": false,
+		"static": {
+			"include": [],
+			"exclude": [],
+			"includePattern": [],
+			"excludePattern": []
+		}
+	}
+  },
+  "tags": {
+	"allowUnknownTags": false,
+	"dictionaries": ["jsdoc","closure"]
+  }
+}

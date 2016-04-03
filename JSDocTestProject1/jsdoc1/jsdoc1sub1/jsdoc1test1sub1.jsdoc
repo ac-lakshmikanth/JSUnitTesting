@@ -1,0 +1,26 @@
+/**
+	* test1sub1 function description
+	* @constructor test1sub1
+	* @param {string} titlesub1 - the title of the book
+	* @param {string} authorsub1 - the author of the book
+*/
+function test1sub1(title,author) {
+	this.func1sub1 = function() {
+	}
+	function func1sub1() {
+	}
+}
+test1.func1sub1 = function() {
+}
+
+var t1sub1 = new test1sub1();
+/** 
+	* test1sub1#func1sub1 
+*/
+t1sub1.func1sub1();
+/** 
+	* test1sub1.func1sub1 
+*/
+test1sub1.func1sub1();
+
+// \

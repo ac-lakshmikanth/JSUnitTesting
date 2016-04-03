@@ -1,0 +1,1426 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <title>JSDoc: Source: jsdocproj/define1.js</title>
+
+    <script src="scripts/prettify/prettify.js"> </script>
+    <script src="scripts/prettify/lang-css.js"> </script>
+    <!--[if lt IE 9]>
+      <script src="//html5shiv.googlecode.com/svn/trunk/html5.js"></script>
+    <![endif]-->
+    <link type="text/css" rel="stylesheet" href="styles/prettify-tomorrow.css">
+    <link type="text/css" rel="stylesheet" href="styles/jsdoc-default.css">
+</head>
+
+<body>
+
+<div id="main">
+
+    <h1 class="page-title">Source: jsdocproj/define1.js</h1>
+
+    
+
+
+
+    
+    <section>
+        <article>
+            <pre class="prettyprint source linenums"><code>//-------------------------------------------------------------------------
+// &lt;copyright file="MatchingsController.js" company="PCL">
+//     Premium Credit Limitted. All rights reserved.
+// &lt;/copyright>
+// &lt;author>TechM&lt;/author>
+//-------------------------------------------------------------------------
+// &lt;summary>
+// This file is the ui Controller for Matchings
+// &lt;/summary>
+
+/**
+ * Matchings Controller
+ * @module jsdocproj/define1
+*/
+define([
+    "underscore",
+    "marionette",
+    "l18n!./nls/Matchings_NLS",
+    "app/js/models/directdebit/Matchings/MatchingsModel",
+    "app/js/models/directdebit/Matchings/MatchingsUncorrelateGridModel",
+    "app/js/models/directdebit/Matchings/MatchingUncorrelateCollection",
+    "app/js/models/directdebit/Matchings/MatchingCashRecievedCollection",
+    "app/js/views/directdebit/Matchings/MatchingsView",
+    "app/js/views/directdebit/Matchings/MatchingLayoutView",
+    "app/js/views/directdebit/Matchings/MatchingsDialogView",
+    "app/js/views/directdebit/Matchings/MatchingsUncorrelateView",
+    "app/js/views/directdebit/Matchings/MatchingUncorrelateGridView",
+    "app/js/views/directdebit/Matchings/MatchingsUncorrelateCollectionView",
+    "app/js/models/directdebit/Matchings/MatchingCollectionModel",
+    "app/js/views/directdebit/Matchings/MatchingsCollectionView",
+    "app/js/views/pagination/paginationView",
+    "app/js/views/common/ConfirmationDialog"
+], function (
+    _,
+    Marionette,
+    l18n,
+    MatchingsModel,
+    MatchingsUncorrelateGridModel,
+    MatchingUncorrelateCollection,
+    MatchingCashRecievedCollection,
+    MatchingsView,
+    MatchingLayoutView,
+    MatchingsDialogView,
+    MatchingsUncorrelateView,
+    MatchingUncorrelateGridView,
+    MatchingsUncorrelateCollectionView,
+    MatchingCollectionModel,
+    MatchingsCollectionView,
+    PaginationView,
+    ConfirmationDialog
+    ) {
+
+    return Marionette.Controller.extend({
+
+        /**
+    * @description Holds the  nls/localization contents
+    * @type {Object}
+    */
+        l18n: l18n,
+
+        /**
+    * @description {FormLayout} Holds the layout (View) for this module
+    * @type {Object}
+    */
+        view: null,
+
+        matchingsDialogView: null,
+
+        matchingUncorrelateGridView: null,
+
+        selectedGridView: null,
+
+        /**
+    * @description The default/initial data to be passed for rendering the page.
+    * @type {Object}
+    * @private
+    */
+        _DEFAULT: {
+            headerData: {
+                "moduleId": "TPCP029",
+                "actionId": "",
+                "moduleName": "Matchings",
+                "moduleID": "TPCP029",
+                "moduleCode": "I03"
+            },
+            footerData: {
+                "setPreviousFocus": true,
+                "links": [
+                    { "keyAction": "INIT_PAID", "keyPress": "p", "keyTxt": "Paid" },
+                    { "keyAction": "INIT_RECEIVED", "keyPress": "r", "keyTxt": "Received" },
+                    { "keyAction": "INIT_JOURNALMATCH", "keyPress": "j", "keyTxt": "JournalMatch" },
+                    { "keyAction": "INIT_ALLOCATE", "keyPress": "a", "keyTxt": "Allocate" },
+                    { "keyAction": "INIT_VALIDATE", "keyPress": "v", "keyTxt": "Validate" },
+                    { "keyAction": "ABORT", "keyPress": "f4", "keyTxt": "Back" }
+                ]
+            }
+        },
+
+        /**
+    * @description The ADD data to be passed while in "ADD" mode
+    * @type {Object}
+    * @private
+    */
+
+
+        _RECEIVED: {
+            headerData: {
+                actionId: "RECEIVED"
+            },
+            footerData: {
+                links: [
+                    { "keyAction": "RECIEVED_SEARCH", "keyPress": "f9", "keyTxt": "Search", "isPrimary": true },
+                    { "keyAction": "INIT", "keyPress": "f4", "keyTxt": "Abort" }
+                ]
+            }
+        },
+
+        _JOURNALMATCH: {
+            headerData: {
+                actionId: "JOURNAL"
+            },
+            footerData: {
+                links: [
+                    { "keyAction": "SEARCH", "keyPress": "f9", "keyTxt": "Search", "isPrimary": true },
+                    { "keyAction": "INIT", "keyPress": "f4", "keyTxt": "Abort" }
+                ]
+            }
+        },
+
+        _VALIDATE: {
+            headerData: {
+                actionId: "PRINT"
+            },
+            footerData: {
+                links: [
+                      { "keyAction": "PRINT_MATCHINGS", "keyPress": "f9", "keyTxt": "Print", "isPrimary": true },
+                      { "keyAction": "INIT", "keyPress": "f4", "keyTxt": "Abort" }
+                ]
+            }
+        },
+
+        _ALLOCATE: {
+            headerData: {
+                actionId: "ALLOCATION"
+            },
+            footerData: {
+                links: [
+                    { "keyAction": "SEARCH", "keyPress": "f9", "keyTxt": "Search", "isPrimary": true },
+                    { "keyAction": "INIT", "keyPress": "f4", "keyTxt": "Abort" }
+                ]
+            }
+        },
+
+        /**
+      * @description The INQUIRE data to be passed while in "INQUIRE" mode
+      * @type {Object}
+      * @private
+      */
+        _PAID: {
+            headerData: {
+                "actionId": "PAID"
+            },
+            footerData: {
+                links: [
+                    { "keyAction": "SEARCH", "keyPress": "f9", "keyTxt": "Search", "isPrimary": true },
+                    { "keyAction": "INIT", "keyPress": "f4", "keyTxt": "Abort" }
+                ]
+            }
+        },
+
+        _UNCORRELATE: {
+            footerData: {
+                links: [
+                    { "keyAction": "SAVE", "keyPress": "f9", "keyTxt": "Save" },
+                    { "keyAction": "ABORT_SAVE", "keyPress": "f4", "keyTxt": "Abort" }
+                ]
+            }
+        },
+
+        _PAID_YES: {
+            headerData: {
+                "actionId": "PAID"
+            },
+            footerData: {
+                links: [
+
+                    { "keyAction": "SAVE_YES", "keyPress": "f9", "keyTxt": "Save" },
+                    { "keyAction": "ABORT_SAVE", "keyPress": "f4", "keyTxt": "Abort" }
+                ]
+            }
+        },
+
+        _SAVE_PAID_YES: {
+
+            footerData: {
+                links: [
+                    { "keyAction": "MATCH_MORE_ITEMS_YES", "keyPress": "m", "keyTxt": "Match More Items" },
+                    { "keyAction": "UNCORRELATE", "keyPress": "u", "keyTxt": "Uncorrelate" },
+                    { "keyAction": "DIFFERENCES", "keyPress": "d", "keyTxt": "Write To Differences" },
+                    { "keyAction": "ABORT_SAVE", "keyPress": "f4", "keyTxt": "Abort" }
+                ]
+            }
+        },
+
+        _SHOW_INQUIRE_ALL: {
+            footerData: {
+                links: [
+
+                    { "keyAction": "MATCH", "keyPress": "m", "keyTxt": "Match" },
+                    { "keyAction": "UNMATCH", "keyPress": "u", "keyTxt": "Unmatch" },
+                    { "keyAction": "NEXT", "keyPress": "n", "keyTxt": "Next" },
+                    { "keyAction": "PREV", "keyPress": "p", "keyTxt": "Previous" },
+                    { "keyAction": "SAVE", "keyPress": "f9", "keyTxt": "Save" },
+                    { "keyAction": "ABORT_SAVE", "keyPress": "f4", "keyTxt": "Abort" }
+                ]
+            }
+        },
+
+        _SHOW_INQUIRE: {
+            footerData: {
+                links: [
+                    { "keyAction": "YES", "keyPress": "y", "keyTxt": "Yes" },
+                    { "keyAction": "NO", "keyPress": "n", "keyTxt": "No" }
+                ]
+
+            }
+
+        },
+
+        _SAVEPAID: {
+
+            footerData: {
+                links: [
+                    { "keyAction": "MATCH_MORE_ITEMS", "keyPress": "m", "keyTxt": "Match More Items" },
+                    { "keyAction": "UNCORRELATE", "keyPress": "u", "keyTxt": "Uncorrelate" },
+                    { "keyAction": "DIFFERENCES", "keyPress": "d", "keyTxt": "Write To Differences" },
+                         { "keyAction": "ABORT_SAVE", "keyPress": "f4", "keyTxt": "Abort" }
+                ]
+            }
+        },
+
+        _PAID_NO_DETAIL: {
+            footerData: {
+                links: [
+                    { "keyAction": "UNCORRELATE", "keyPress": "u", "keyTxt": "Uncorrelate" },
+                    { "keyAction": "DIFFERENCES", "keyPress": "d", "keyTxt": "Write To Differences" },
+                    { "keyAction": "ABORT_SAVE", "keyPress": "f4", "keyTxt": "Abort" }
+                ]
+            }
+        },
+
+        _SAVEJOURNAL: {
+            footerData: {
+                links: [
+                    { "keyAction": "MATCH_MORE_ITEMS", "keyPress": "m", "keyTxt": "Match More Items" },
+                    { "keyAction": "DIFFERENCES", "keyPress": "d", "keyTxt": "Write To Differences" }
+                ]
+            }
+        },
+
+        _SAVEJOURNAL_MATCH_MORE_ITEMS: {
+            footerData: {
+                links: [
+                    { "keyAction": "MATCH_MORE_ITEMS", "keyPress": "m", "keyTxt": "Match More Items" },
+                ]
+            }
+        },
+
+        recievedCollectionData: [],
+
+        _initialize: function () {
+            this.baseModel.set("headerData", this._DEFAULT.headerData);
+            this.baseModel.set("footerData", this._DEFAULT.footerData);
+            this.layout.renderRegions();
+            this.model = new MatchingsModel();
+            this.collection = new MatchingCollectionModel();
+            this.storedCollection = new MatchingCollectionModel();
+            this.cashReferenceCollection = new MatchingCashRecievedCollection();
+            this.uncorrelateCollection = new MatchingUncorrelateCollection();
+            this.storedUnCorrelateCollection = new MatchingUncorrelateCollection();
+
+            this.uncorrelateView = new MatchingsUncorrelateView({ model: this.model, collection: this.uncorrelateCollection });
+            this.uncorrelateCollectionView = new MatchingsUncorrelateCollectionView({ model: this.model, collection: this.uncorrelateCollection });
+
+            this.layoutView = new MatchingLayoutView({ "model": this.model });
+            this.view = new MatchingsView({ "model": this.model });
+            this.collectionView = new MatchingsCollectionView({ "model": this.model, "collection": this.collection });
+            this.layout.containerRegion.show(this.layoutView);
+            this.layoutView.dataRegion.show(this.view);
+            this.matchingsDialogView = new MatchingsDialogView({ "model": this.model, "baseModel": this.baseModel });
+            this.layout.containerRegion.$el.append(this.matchingsDialogView.render().el);
+            this.paginationView = new PaginationView({ "model": this.model, "collection": this.collection });
+            this.saveDialogView = new ConfirmationDialog({
+                "msg": "Confirm Search?",
+                "title": "Matchings",
+                "model": this.baseModel
+            });
+            this.layout.dialogBoxRegion.show(this.saveDialogView);
+            this.footerView = this.layout.footerView;
+            this.headerView = this.layout.headerView;
+            this.setEventBindings();
+            this.INIT();
+        },
+
+        /**
+      * @description Sets the event listener for the views added
+      * @type {Function}
+      */
+        setEventBindings: function () {
+            this.layout.footerView.on("keyAction", _.bind(this.keyAction, this));
+            this.view.on("EVT_FETCH_ACCOUNT_NAME", _.bind(this.getAccountName, this));
+            this.view.on("EVT_VALIDATE_BATCH_NUMBER", _.bind(this.validateBatchNumber, this));
+            this.view.on("EVT_CHK_CASH_GENERATED", _.bind(this.checkCashReference, this));
+            this.view.on("EVT_GET_CHEQUE_REFERENCE", _.bind(this.getChequeReference, this));
+            this.view.on("EVT_SEARCH_MATCHING_DETAILS", _.bind(this.SEARCH, this));
+            this.view.on("EVT_INVALID_CHEQUE_VALUE", _.bind(this.setInvalidChequeValue, this));
+            this.paginationView.on("fetchCollection", _.bind(this.getMatchingDetails, this));
+            this.collectionView.on("EVT_SET_CHANGE", _.bind(this.getCalculation, this));
+            this.matchingsDialogView.on("EVT_DIFFERENCE_ACCOUNT_SHORTNAME", _.bind(this.getDifferenceAccountName, this));
+            this.matchingsDialogView.on("EVT_DIFFERENCE_ACCOUNT_CLOSE", _.bind(this.onCloseMatchingDialogView, this));
+            this.matchingsDialogView.on("EVT_CONFIRM_SAVE", _.bind(this.SaveDifference, this));
+
+            this.saveDialogView.on("confirmDialog", _.bind(this.confirmDialogView, this));
+            this.saveDialogView.on("closeDialog", _.bind(this.closeDialogView, this));
+        },
+
+        //getBatchNumber: function (val) {
+        //},
+
+        onCloseMatchingDialogView: function () {
+            this.matchingsDialogView.hide();
+            this.matchingsDialogView.resetForDifference();
+        },
+
+        /**
+      * @description Sets the event listener for the views added
+      * @param {String} actionId The action id clicked or key pressed i.e SAVE, ADD, INIT_ADD, DELETE....
+      * @param {Object} evt The Event Object
+      * @type {Function}
+      */
+        keyAction: function (actionId) {
+            this[actionId]();
+        },
+
+        ABORT: function () {
+            this.layout.showMessage.close();
+            this.baseModel.router.goBackToUrl("home/direct_debit", { trigger: true });
+        },
+
+        INIT: function () {
+            this.currMode = "INIT";
+            this.baseModel.set("headerData", this._DEFAULT.headerData);
+            this.baseModel.set("footerData", this._DEFAULT.footerData);
+            this.model.reset();
+            this.paginationView.reset();
+            this.collection.reset();
+            this.cashReferenceCollection.reset();
+            this.uncorrelateCollection.reset();
+            this.storedCollection.reset();
+            this.storedUnCorrelateCollection.reset();
+            this.view.INIT();
+            this.layoutView.unCorrelateRegion.empty();
+            this.layoutView.$el.find("#unCorrelateRegionTable").hide();
+            this.layoutView.$el.find("#gridRegion").show();
+            this.layoutView.$el.find("table#gridRegion").append(this.collectionView.render().el).after(this.paginationView.render().el);
+        },
+
+        INIT_RECEIVED: function () {
+            this.currMode = "RECEIVED";
+            this.baseModel.set("headerData", this._RECEIVED.headerData);
+            this.baseModel.set("footerData", this._RECEIVED.footerData);
+            this.view.RECEIVED();
+            this.view.disableFieldsOnRecieved(true);
+            this.view.disableFieldsOnAllocate(true);
+            this.getBatchNumber();
+            this.getTransRef();
+        },
+
+        /**
+      * @description changes the currMode to "DELETE", add the DELTE data and init delete events.
+      * @type {Function}
+      */
+        INIT_ALLOCATE: function () {
+            this.currMode = "ALLOCATE";
+            this.model.set({ "firstOption": "firstOption" });
+            this.baseModel.set("headerData", this._ALLOCATE.headerData);
+            this.baseModel.set("footerData", this._ALLOCATE.footerData);
+            this.view.ALLOCATE();
+            this.view.disableFieldsCommon(true);
+            this.view.disableFieldsOnJournalAllocate(true);
+            this.view.disableFieldsOnAllocate(true);
+            this.getBatchNumber();
+            this.getTransRef();
+
+        },
+
+        /**
+      * @description changes the currMode to "CHANGE", add the CHANGE data and init change events.
+      * @type {Function}
+      */
+        INIT_VALIDATE: function () {
+            this.currMode = "VALIDATE";
+            this.baseModel.set("headerData", this._VALIDATE.headerData);
+            this.baseModel.set("footerData", this._VALIDATE.footerData);
+            this.view.disableForm(true);
+            this.model.reset();
+            this.paginationView.reset();
+            this.collection.reset();
+            this.view.VALIDATE();
+            this.view.enableBatchNumber();
+            this.view.disablecashReference();
+            if (this.getCookie("batchNumber")) {
+                this.view.setBatchNumber(this.getCookie("batchNumber"));
+            }
+        },
+
+        INIT_JOURNALMATCH: function () {
+            this.currMode = "JOURNAL";
+            this.model.set("currMode", "JOURNAL");
+            this.baseModel.set("headerData", this._JOURNALMATCH.headerData);
+            this.baseModel.set("footerData", this._JOURNALMATCH.footerData);
+            this.view.JOURNALMATCH();
+            this.view.disableFieldsCommon(true);
+            this.view.disableFieldsOnJournalAllocate(true);
+            this.getBatchNumber();
+            this.getTransRef();
+        },
+
+        INIT_PAID: function () {
+            //this.onGetPrintMatchingsSuccess();
+            //return;
+
+            this.currMode = "PAID";
+            this.baseModel.set("headerData", this._PAID.headerData);
+            this.baseModel.set("footerData", this._PAID.footerData);
+            this.view.PAID();
+            this.view.disableFieldsCommon(true);
+            this.getBatchNumber();
+            this.getTransRef();
+
+        },
+        ABORT_UNCORRELATE_GRID: function () {
+            this.layoutView.unCorrelateRegion.empty();
+            this.layoutView.$el.find("#unCorrelateRegionTable").hide();
+            this.layoutView.$el.find("#gridRegion").show();
+            //this.baseModel.set("footerData", this._DEFAULT.footerData);
+            this.INIT();
+        },
+
+        _PRINT_TEMPLATE: "Matchings",
+        _PRINT_TEMPLATE1: "remittanceAdvice",
+
+        matchingsPrint: function () {
+            var options = {
+                "url": "../Matching/GetPrintMatchingTransactions",
+                "data": {
+                    "batchSequenceNumber": this.model.get("batchSequenceNumber")
+                },
+                "onSuccess": _.bind(this.onGetPrintMatchingsSuccess, this)
+            };
+            this.model.fetch(options);
+        },
+
+        onGetPrintMatchingsSuccess: function (response) {
+            debugger;
+            //var response = {
+            //    "success": true,
+            //    "entryType": "J",
+            //    "accountNo": "3309405",
+            //    "currencyName": "POUNDS STERLING",
+            //    "customerName": "ANTUR INSURANCE SERVICES LTD",
+            //    "address1": "163 ST HELENS ROAD",
+            //    "address2": "SWANSEA",
+            //    "address3": "SA1 4DQ",
+            //    "address4": " ",
+            //    "address5": " ",
+            //    "postCode": null,
+            //    "currency": "GBP",
+            //    "remittanceDate": "10/22/2015 12:00:00 AM",
+            //    "unmatchedEntity": [],
+            //    "grossDr": null,
+            //    "grossCr": null,
+            //    "matchedBalance": 913.14,
+            //    "unmatchedBalance": null,
+            //    "matchedEntity": [
+            //      {
+            //          "fileNo": "D508629ATC",
+            //          "accountNo": "3309405",
+            //          "accountReference": "AUTO NB",
+            //          "amount": null,
+            //          "brokerRef1": "D09284LK",
+            //          "brokerRef2": "MT00010",
+            //          "matchingRef1": "D508629ATC",
+            //          "matchingRef2": "PA00001",
+            //          "payeeName": "ABC",
+            //          "amountDue": 913.14,
+            //          "currencyCode": "GBP",
+            //          "createDt": "2015-10-23T15:46:28.077",
+            //          "createId": 1430,
+            //          "amount2": 913.14,
+            //          "timeStamp": "AAAAAFnkhjA=",
+            //          "dueDate": "30Oct15",
+            //          "generalLedgerAccountId": 57028,
+            //          "narrative": "",
+            //          "divisionId": 1,
+            //          "generalLedgerWorkDetailID": 45822,
+            //          "accountName": "ANTUR INS SVCS LTD",
+            //          "matchingTransactionReference2": "PA00001"
+            //      }
+            //    ],
+            //    "batchSequenceNumber": "D09284LK",
+            //    "debitsTotal": 913.14,
+            //    "noOfItems": 1,
+            //    "operatorName": "LK  LISA KING H/D",
+            //    "isBatchDeleted": false,
+            //    "isBatchPrinted": true,
+            //    "drCurrency": 0,
+            //    "crCurrency": 0,
+            //    "divisionId": 2,
+            //    "generalLedgerTransactionControlID": 687,
+            //    "dateStarted": null,
+            //    "timeStamp": "AAAAAFnkhjE=",
+            //    "createDt": "2015-10-23T15:46:28",
+            //    "createId": 1430,
+            //    "isBatchGenerated": false,
+            //    "isBatchCreated": true,
+            //    "isSuperVisorAccess": false,
+            //    "isNotDirectDebit": false,
+            //    "dueDate": "2015-10-23T15:46:45.653"
+            //}
+
+            if (!response.isBatchDeleted &amp;&amp; !response.isNotDirectDebit &amp;&amp; !response.isNotChequeProduction &amp;&amp; (response.success)) {
+                if (response.entryType != 'J') {
+                    this.PRINT(response, this._PRINT_TEMPLATE, {});
+                    this.INIT();
+                }
+                else {
+                    this.PRINT(response, this._PRINT_TEMPLATE1, {});
+                    this.INIT();
+                }
+            }
+            else {
+                this.view.showMessage.warning("Work File not Found");
+            }
+        },
+
+        PRINT_MATCHINGS: function () {
+            var batchNo = this.view.getBatch();
+            if (batchNo !== "" &amp;&amp; this.model.isDataValid("batchSequenceNumber")) {
+                this.validateBatchNumber();
+            } else {
+                this.view.showMessage.error("Work File not Found");
+                this.view.focusOnInvalidElement();
+            }
+        },
+
+        onValidatePrintSuccess: function (ifPrintRequired, response) {
+            if (response.success &amp;&amp; ifPrintRequired) {
+                this.matchingsPrint();
+            }
+            else {
+                this.INIT();
+            }
+        },
+
+        getBatchNumber: function () {
+            var options = {
+                "url": "../Matching/GetBatchNumber",
+                "onSuccess": _.bind(this.onBatchNumberSuccess, this)
+            };
+            this.model.fetch(options);
+        },
+
+        onBatchNumberSuccess: function (response) {
+            if (response.success) {
+                this.view.setBatchNumber();
+            }
+        },
+
+        getTransRef: function () {
+            var options = {
+                "url": "../Matching/GetTransactionNumber",
+                "data": {
+                    "currMode": this.currMode
+                },
+                "onSuccess": _.bind(this.onTransactionNumberSuccess, this)
+            };
+            this.model.fetch(options);
+        },
+
+        onTransactionNumberSuccess: function (response) {
+            if (response.success) {
+                this.view.setTransRef();
+            }
+        },
+
+        validateBatchNumber: function () {
+            var options = {
+                "url": "../Matching/GetTransactionRecord",
+                "data": {
+                    "brokerReference1": this.view.getBatch()
+                },
+                "onSuccess": _.bind(this.onValidateSuccess, this)
+            };
+            this.model.fetch(options);
+        },
+
+        onValidateSuccess: function (response) {
+            debugger;
+            if (response.success) {
+                this.saveDialogView.setContent({
+                    "title": "Matchings",
+                    "msg": "Do you wish to print the Matched Items report Y/N ?"
+                }).show();
+            } else {
+                this.view.showMessage.error("Work File not Found");
+                this.model.setInvalidModel({ "batchSequenceNumber": this.view.getBatch() }, "Enter Batch Number");
+                this.view.focusOnInvalidElement();
+            }
+        },
+
+        setInvalidChequeValue: function () {
+            this.view.showMessage.error("Enter Cheque Value");
+            this.model.setInvalidModel({ "cheqVal": this.view.getChequeValue() }, "Enter Cheque Value");
+        },
+
+        checkCashReference: function () {
+            var options = {
+                "url": "../Matching/GetValidateCashReference",
+                "data": {
+                    "cashReference1": this.view.getCashRef1()
+                },
+                "onSuccess": _.bind(this.onChequeSuccess, this)
+            };
+            this.model.fetch(options);
+        },
+
+        onChequeSuccess: function (response) {
+            if (response.isInvalidCheque) {
+                this.view.showMessage.error(l18n.inValidCheque);
+                this.model.setInvalidModel({ "cashReference1": this.view.getCashRef1() }, l18n.inValidCheque);
+                this.view.focusOnCashRef1();
+            } else {
+                this.model.clearInvalidModel({ "cashReference1": this.view.getCashRef1() });
+            }
+        },
+
+        getChequeReference: function (cashRef1, cashRef2) {
+            var isCashReferenceValid = true,
+                options = {
+                    "url": "../Matching/GetCashReference",
+                    "data": {
+                        "cashReference1": cashRef1,
+                        "cashReference2": "CR" + cashRef2
+                    },
+                    "onSuccess": _.bind(this.onGetChequeSuccess, this)
+                };
+
+            _.forEach(this.cashReferenceCollection.models, _.bind(function (model, indexId) {
+                if (model.get("cashReference1") === cashRef1 &amp;&amp;
+                        model.get("cashReference2") === cashRef2) {
+                    this.model.setInvalidModel("cashReference2", "This Reference Has Already Been Entered");
+                    isCashReferenceValid = false;
+                }
+            }, this));
+
+            if (isCashReferenceValid) {
+                this.model.fetch(options);
+            } else {
+                this.view.focusOnInvalidElement();
+            }
+        },
+
+        onGetChequeSuccess: function (response) {
+            if (response.matchedSuccess) {
+                //if item already matched {1 means matched, display error message}
+                this.layout.showMessage.error(l18n.itemMatched + response.batchReference);
+                this.model.setInvalidModel({ "cashReference1": this.view.getCashRef1() }, l18n.itemMatched);
+            } else {
+                if (response.isInvalidCheque) {
+                    this.view.showMessage.error(l18n.inValidCheque);
+                    this.model.setInvalidModel({ "cashReference1": this.view.getCashRef1() }, l18n.inValidCheque);
+                    this.view.focusOnCashRef1();
+                } else {
+                    this.view.getChequeValuePayee();
+                    this.view.disableOnChequeSuccess(false);
+                    this.view.focusOnPayee();
+                }
+            }
+        },
+
+        getAccountName: function (account) {
+            if (account.length === 10) {
+                var options = {
+                    "url": "../Matching/ValidateAccountNumber",
+                    "data": {
+                        "accountCurrencyCode": this.view.getAccountNumber(),
+                        "currMode": this.currMode
+                    },
+                    "onSuccess": _.bind(this.onAccountNameSuccess, this)
+                };
+                this.model.fetch(options);
+            } else {
+                this.view.showMessage.error(l18n.invalidAccount);
+                this.model.setInvalidModel({ "baseAccountNo": this.view.getAccountNumber() }, l18n.invalidAccount);
+                this.view.focusAccount();
+            }
+        },
+
+        onAccountNameSuccess: function (response) {
+            if (response.success) {
+                if (response.isInvalid) {
+                    this.view.invalidAccountNumber();
+                    this.layout.showMessage.error(l18n.invalidAccount);
+                    this.model.setInvalidModel({ "baseAccountNo": this.view.getAccountNumber() }, l18n.invalidAccount);
+                } else if (response.isInsuranceType) {
+                    this.view.invalidAccountNumber();
+                    this.layout.showMessage.error(l18n.insuranceType);
+                    this.model.setInvalidModel({ "baseAccountNo": this.view.getAccountNumber() }, l18n.insuranceType);
+                }
+                else if (response.isClientAccount) {
+                }
+                this.view.setAccountName();
+            } else {
+                if (this.currMode === "ALLOCATE") {
+                    this.view.showMessage.error(l18n.wrongAccount);
+                    this.model.setInvalidModel({ "baseAccountNo": this.view.getAccountNumber() }, l18n.wrongAccount);
+                }
+                else {
+                    this.view.invalidAccountNumber();
+                    this.view.showMessage.error(l18n.invalidAccount);
+                    this.model.setInvalidModel({ "baseAccountNo": this.view.getAccountNumber() }, l18n.invalidAccount);
+                }
+            }
+        },
+
+        getDifferenceAccountName: function () {
+            var options = {
+                "url": "../Matching/GetDifferenceAccount",
+                "data": {
+                    "accountNo": this.matchingsDialogView.getDiffAccount()
+                },
+                "onSuccess": _.bind(this.onDifferenceAccountSuccess, this)
+            };
+            this.model.fetch(options);
+        },
+
+        onDifferenceAccountSuccess: function (response) {
+            if (response.success &amp;&amp; response.differenceAccnt) {
+                this.matchingsDialogView.setDiffAccntShortName();
+            } else {
+                this.matchingsDialogView.invalidDifferenceAccount();
+                this.view.showMessage.error(l18n.invalidAccount);
+                this.model.setInvalidModel({ "differenceAccount": this.matchingsDialogView.getDiffAccount() }, l18n.invalidAccount);
+                this.matchingsDialogView.focusOnDifferenceAccount();
+            }
+        },
+
+        getUnCorrelateAccount: function (view, acNo) {
+            this.selectedGridView = view;
+            var options = {
+                "url": "../Matching/GetUnCorrelateAccount",
+                "data": {
+                    "accountNo": acNo
+                },
+                "onSuccess": _.bind(this.onUnCorrelateAccountSuccess, this, acNo)
+            };
+            this.selectedGridView.model.fetch(options);
+        },
+
+        onUnCorrelateAccountSuccess: function (acNo, response) {
+            var dataAccount = this.view.getAccountNumber(),
+                dAcNo = dataAccount.substring(0, 7);
+            if (response.success) {
+                if (response.isDeleted) {
+                    this.view.showMessage.error(l18n.deletedUncorrelateAccount);
+                    this.selectedGridView.model.setInvalidModel("account", l18n.deletedUncorrelateAccount);
+                    this.selectedGridView.focusOnAccount();
+                } else {
+                    if (response.validAccount === true) {
+                        if (dAcNo === acNo &amp;&amp; response.unCorrelateAcct === true) {
+                        } else {
+                            this.view.showMessage.error(l18n.unAuthorisedAccNo);
+                            this.selectedGridView.model.setInvalidModel("account", l18n.unAuthorisedAccNo);
+                            this.selectedGridView.focusOnAccount();
+                        }
+                    }
+                }
+            } else {
+                this.view.showMessage.error(l18n.invalidAccount);
+                this.selectedGridView.model.setInvalidModel("account", l18n.invalidAccount);
+                this.selectedGridView.focusOnAccount();
+            }
+        },
+
+        RECIEVED_SEARCH: function () {
+            this.view.disableAccountChequeValue(true);
+            var noOfCheque = this.view.getNoOfCheques(),
+                chequeTotal = this.model.get("chequeTotal"),
+                cashReferncePrimeAmount = this.model.get("cashReferncePrimeAmount"),
+                modelHasErrors = this.model.validate(this.model.attributes);
+            if (!modelHasErrors) {
+                this.cashReferenceCollection.add(this.model.getCashReferenceCollectionData());
+                if (parseFloat(noOfCheque) > 1) {
+                    this.view.clearCashRef1AndCashRef2();
+                    this.view.setChequeValue();
+                    this.view.setCode();
+                    this.view.focusOnCashRef1();
+                    noOfCheque = parseFloat(noOfCheque) - 1;
+                    this.model.set({ "noOfCheques": noOfCheque });
+                    this.view.changeNoOfCheque();
+                    this.model.resetCashReferenceCollectionData();
+
+                } else if (parseFloat(noOfCheque) === 1) {
+                    this.view.setChequeValue();
+                    this.view.setCode();
+                    noOfCheque = parseFloat(noOfCheque) - 1;
+                    this.model.set({ "noOfCheques": noOfCheque });
+                    this.model.set({ "chequeTotal": chequeTotal });
+                    this.view.changeNoOfCheque();
+                    this.saveDialogView.setContent({
+                        "title": l18n.confirmationTitle,
+                        "msg": "Confirm?"
+                    }).show();
+                }
+            } else {
+                this.view.focusOnInvalidElement();
+            }
+        },
+
+        confirmDialogView: function () {
+            if (this.currMode === "RECEIVED") {
+                this.saveDialogView.hide();
+                this.view.disableFieldsOnAllocate(false);
+                this.view.disableFieldsOnRecieved(true);
+                this.view.disableCashReference(true);
+                this.view.focusOnBrokerRef();
+                this.baseModel.set("footerData", this._JOURNALMATCH.footerData);
+            } else if (this.currMode === "VALIDATE") {
+                this.saveDialogView.hide();
+                var options = {
+                    "url": "../Matching/ValidateLedgerTranControl",
+                    "type": "PUT",
+                    "onSuccess": _.bind(this.onValidatePrintSuccess, this, true)
+                };
+
+                this.model.save(this.model.attributes, options);
+            }
+        },
+
+        SEARCH: function () {
+            this.subMode = "SEARCH";
+            this.model.set("subMode", this.subMode);
+            this.model.set({ "firstMatch": "firstMatch" });
+            if (this.model.get("journalSearchWithBrokerAndTrans") === true) {
+                this.view.addBindingToBrokerAndTransRef();
+                //this.view.bindings.brokerRef_1.params.required = true;
+                //this.view.bindings.transRef_2.params.required = true;
+            }
+            if (!this.model.validate(this.model.attributes)) {
+                var options = {
+                    "url": "../Matching/GetMatchingsTotalCount",
+                    "data": {
+                        "accountNumber": this.view.getAccountNumber(),
+                        "brokerRef": this.view.getBrokerRef(),
+                        "transRef": this.view.getTransRef2()
+                        ////"mode": this.currMode
+                    },
+                    "onSuccess": _.bind(this.onMatchingTotalCountSuccess, this)
+                };
+            } else {
+                this.view.focusOnInvalidElement();
+            }
+            if (!this.model.validate(this.model.attributes)) {
+                this.model.fetch(options);
+            } else {
+                this.view.focusOnInvalidElement();
+            }
+        },
+
+        onMatchingTotalCountSuccess: function (response) {
+            var brokerRef = this.view.getBrokerRef(),
+                transRef = this.view.getTransRef2();
+            if (response &amp;&amp; response.matchingCount > 0) {
+                this.paginationView.setPaginationData({
+                    pageSize: document._RESULT_SIZE,
+                    total: response.matchingCount,
+                    currentPage: 1
+                });
+                this.paginationView.goToPage(1);
+                this.view.setCode();
+            } else {
+                if (brokerRef !== "" &amp;&amp; transRef !== "") {
+                    this.view.clearBrokerAndTransRef();
+                    this.view.focusOnBrokerRef();
+                    this.paginationView.reset();
+                    if (this.model.get("currMode") === "JOURNAL") {
+                        this.model.set("journalSearchWithBrokerAndTrans", true);
+                    }
+                }
+                else if (this.currMode === "ALLOCATE") {
+                    this.layoutView.showMessage.warning("No Item On File For Selected Transaction. Please Re-Key");
+                    this.baseModel.set("footerData", this._ALLOCATE.footerData);
+                }
+                else {
+                    this.baseModel.set("footerData", this._PAID_NO_DETAIL.footerData);
+                }
+            }
+        },
+
+        getMatchingDetails: function (options) {
+            var brokerRef = this.view.getBrokerRef(),
+                transRef = this.view.getTransRef2();
+            this.view.disableForm(true);
+            if (brokerRef === "" &amp;&amp; transRef === "") {
+                this.baseModel.set("footerData", this._SHOW_INQUIRE_ALL.footerData);
+            } else {
+                this.baseModel.set("footerData", this._SHOW_INQUIRE.footerData);
+            }
+            options.onSuccess = _.bind(this.onMatchingDetailsSuccess, this);
+            options.url = "../Matching/GetMatchingsPageDetails";
+            options.data.accountNumber = this.view.getAccountNumber();
+            options.data.brokerRef = this.view.getBrokerRef();
+            options.data.transRef = this.view.getTransRef2();
+            //// options.data.mode = this.currMode;
+            this.model.fetch(options);
+        },
+
+        onMatchingDetailsSuccess: function (response) {
+            var matchedDetails;
+            var merged_result = [], matchedRowsIndexArr = [];
+            if (this.subMode === "SEARCH") {
+                if (this.model.get("isYesClicked") === true) { } else {
+                    this.collection.reset();
+                }
+
+                ////if (response.matchingDetailsList) {
+                ////    merged_result = _.union(merged_result, response.matchingDetailsList);
+                ////}
+                ////if (response.capturedDetailsList) {
+                ////    merged_result = _.union(merged_result, response.capturedDetailsList);
+                ////}
+                this.model.set("matchingDetailsList", response.matchingDetailsList);
+                this.collection.add(this.model.get("matchingDetailsList"));
+                this.collectionView.focusFirstListItem();
+            } else {
+
+                ////if (response.matchingDetailsList) {
+                ////    merged_result = _.union(merged_result, response.matchingDetailsList);
+                ////}
+                ////if (response.capturedDetailsList) {
+                ////    merged_result = _.union(merged_result, response.capturedDetailsList);
+                ////}
+                this.model.set("matchingDetailsList", response.matchingDetailsList);
+
+
+                _.forEach(this.model.get("matchingDetailsList"), _.bind(function (listObj, indexId) {
+                    matchedDetails = this.storedCollection.findWhere({
+                        "dReferenceNumber": listObj.dReferenceNumber,
+                        "transactionReferenceNumber": listObj.transactionReferenceNumber,
+                        "primeAmount": listObj.primeAmount,
+                        "datePosted": listObj.datePosted
+                    });
+                    if (matchedDetails) {
+                        listObj.matchedStatus = "M";
+                        matchedRowsIndexArr[matchedRowsIndexArr.length] = indexId;
+                    }
+                }, this));
+                this.collection.reset();
+                this.collection.add(this.model.get("matchingDetailsList"));
+
+                this.collectionView.focusFirstListItem();
+                this.collectionView.highlightMatchedRows(matchedRowsIndexArr);
+            }
+            this.subMode = null;
+        },
+
+        MATCH: function () {
+            this.subMode = "M";
+            this.model.set("subMode", this.subMode);
+            var lastGridModel = this.collectionView.collection.at(this.collectionView.selectedIndexId),
+                options = {
+                    "url": "../Matching/GetMatchingStatus",
+                    "data": {
+                        "matchReference1": lastGridModel.attributes.dReferenceNumber,
+                        "matchReference2": lastGridModel.attributes.transactionReferenceNumber
+                        //"accountCurrencyCode": this.view.getAccountNumber()
+                    },
+                    "onSuccess": _.bind(this.matchSuccess, this)
+                };
+            this.model.fetch(options);
+        },
+
+        matchSuccess: function (response) {
+            var lastGridModel = this.collectionView.collection.at(this.collectionView.selectedIndexId);
+            if (response.success) {
+                //brokerRef and transRef is found, check for Match status {1}      
+                // if (response.isItemMatched) {
+                //if item already matched {1 means matched, display error message}
+                this.layout.showMessage.error(l18n.itemMatched + response.batchReference);
+                this.collectionView.focusCurrentListItemButton();
+                if (this.model.get("isYesClicked") === true) {
+                    this.collection.pop();
+                }
+
+            } else {
+                if (lastGridModel.attributes.matchedStatus === "U") {
+                    if (this.currMode === "PAID") {
+                        this.collectionView.enableChangeMatch();
+                        this.storedCollection.add(this.collection.at(this.collectionView.selectedIndexId));
+                        this.view.getMatchItems(this.storedCollection.length);
+                    } else if (this.currMode === "JOURNAL") {
+                        this.collectionView.enableChangeMatch();
+                        this.storedCollection.add(this.collection.at(this.collectionView.selectedIndexId));
+                        this.view.getMatchItems(this.storedCollection.length);
+                        this.view.setCodeForJournal();
+                    } else if (this.currMode === "ALLOCATE") {
+                        this.collectionView.enableChangeMatch();
+                        this.storedCollection.add(this.collection.at(this.collectionView.selectedIndexId));
+                        this.model.set({ "noOfItems": this.storedCollection.length });
+                        this.view.setCodeForJournal();
+                    } else if (this.currMode === "RECEIVED") {
+                        this.model.set({ "amountRemaining": this.model.get("chequeTotal") });
+                        this.view.setAllocateRate();
+                        this.collectionView.enableChangeMatch();
+                        this.storedCollection.add(this.collection.at(this.collectionView.selectedIndexId));
+                        this.model.set({ "noOfItems": this.storedCollection.length });
+                    }
+                    this.collectionView.focusNextListItemButton();
+                }
+                else {
+                    this.collectionView.focusCurrentListItemButton();
+                }
+            }
+        },
+
+        UNMATCH: function () {
+            this.subMode = "U";
+            this.model.set("subMode", this.subMode);
+            var listObj = this.collection.at(this.collectionView.selectedIndexId);
+            if (listObj.attributes.matchedStatus === "M") {
+                this.collectionView.enableChangeUnmatch();
+                this.storedCollection.remove(this.storedCollection.findWhere({
+                    "dReferenceNumber": listObj.get("dReferenceNumber"),
+                    "transactionReferenceNumber": listObj.get("transactionReferenceNumber")
+                }));
+                if (this.currMode === "PAID" || this.currMode === "JOURNAL") {
+                    this.view.getMatchItems(this.storedCollection.length);
+                } else if (this.currMode === "ALLOCATE") {
+                    this.model.set({ "noOfItems": this.storedCollection.length });
+                } else if (this.currMode === "RECEIVED") {
+                    this.model.set({ "noOfItems": this.storedCollection.length });
+                }
+                this.collectionView.focusNextListItemButton();
+            } else {
+                this.collectionView.focusCurrentListItemButton();
+            }
+        },
+
+        YES: function () {
+            this.subMode = "YES";
+            this.model.set("subMode", this.subMode);
+            this.model.set("isYesClicked", true);
+            if (this.model.get("currMode") === "JOURNAL") {
+                this.model.set("journalYes", "true");
+            }
+            this.view.addBindingToBrokerAndTransRef();
+            var batchNumber = this.view.getBatch();
+            var isBrokerTransRefAlreadyExist = true;
+            var listObj = this.collection.at(this.collectionView.children.length - 1);
+            _.forEach(this.storedCollection.models, _.bind(function (model, indexId) {
+                if (model.get("dReferenceNumber") === listObj.get("dReferenceNumber") &amp;&amp;
+                        model.get("transactionReferenceNumber") === listObj.get("transactionReferenceNumber")) {
+                    isBrokerTransRefAlreadyExist = false;
+                }
+            }, this));
+
+            if (isBrokerTransRefAlreadyExist) {
+                this.MATCH();
+            } else {
+                this.layout.showMessage.error(l18n.itemMatched + batchNumber);
+                this.collection.pop();
+            }
+            this.collectionView.disableChangeButtons(true);
+            this.view.disableBrokerAndTransRef(false);
+            this.view.clearBrokerAndTransRef();
+            this.view.focusOnBrokerRef();
+            this.baseModel.set("footerData", this._PAID_YES.footerData);
+            this.view.PAID();
+        },
+
+        NO: function () {
+            this.subMode = "NO";
+            this.model.set("subMode", this.subMode);
+            this.collection.pop();
+            this.view.disableBrokerAndTransRef(false); if (this.model.get("journalYes") === "true")
+                this.view.clearBrokerAndTransRef();
+            this.view.focusOnBrokerRef();
+            this.baseModel.set("footerData", this._PAID_YES.footerData);
+            this.view.PAID();
+        },
+
+        SAVE_YES: function () {
+            this.SAVE();
+        },
+
+        MATCH_MORE_ITEMS_YES: function () {
+            this.view.clearBrokerAndTransRef();
+            this.view.focusOnBrokerRef();
+            this.baseModel.set("footerData", this._PAID_YES.footerData);
+        },
+
+        getCalculation: function (primeAmount, matchedStatus) {
+            var options = {
+                "url": "../Matching/GetCalculation",
+                "data": {
+                    "primeAmount": primeAmount,
+                    "amountRemaining": this.model.get("amountRemaining") != null ? this.model.get("amountRemaining") : 0,
+                    "matchTotal": this.model.get("matchTotal"),
+                    "matchedStatus": matchedStatus,
+                    "currMode": this.currMode,
+                    "firstMatch": this.model.get("firstMatch")
+                },
+                "onSuccess": _.bind(this.onGetCalculationSuccess, this)
+            };
+            this.model.fetch(options);
+        },
+
+        onGetCalculationSuccess: function (response) {
+            this.view.setValueAfterCalculation();
+        },
+
+        NEXT: function () {
+            this.subMode = "NEXT";
+            var currentpage = this.paginationView.model.get("currentPage"),
+                lastPage = this.paginationView.model.get("lastPage");
+            if (lastPage !== currentpage) {
+                this.paginationView.goToNextPage();
+            } else {
+                this.view.showMessage.error(l18n.noMore);
+            }
+        },
+
+        PREV: function () {
+            this.subMode = "PREV";
+            var currentpage = this.paginationView.model.get("currentPage"),
+                firstPage = this.paginationView.model.get("firstPage");
+            if (firstPage !== currentpage) {
+                this.paginationView.goToPreviousPage();
+            } else {
+                this.view.showMessage.error(l18n.noMore);
+            }
+        },
+
+        SAVE: function () {
+            if (!this.model.validate(this.model.attributes)) {
+                var amountRemaining = this.view.getAmtRemaining();
+                if (this.currMode === "PAID") {
+                    if (this.subMode === "UNCORRELATE") {
+                        if (parseFloat(amountRemaining) !== 0) {
+                            this.model.set({ "uncorrelateCollection": this.uncorrelateCollection.models });
+                            this.baseModel.set("footerData", this._PAID_NO_DETAIL.footerData);
+                        } else {
+                            this.matchedRecordsSave();
+                        }
+                    }
+                    else if (parseFloat(amountRemaining) === 0) {
+                        this.matchedRecordsSave();
+                    }
+                    else {
+                        if (this.model.get("isYesClicked") === true) {
+                            this.baseModel.set("footerData", this._SAVE_PAID_YES.footerData);
+                        }
+                        else {
+                            this.baseModel.set("footerData", this._SAVEPAID.footerData);
+                        }
+                    }
+                } else if (this.currMode === "JOURNAL") {
+                    if (parseFloat(amountRemaining) !== 0 || this.model.get("amountRemaining") === null) {
+                        //if (this.currMode === "JOURNAL") {
+                        if (this.model.get("journalYes") === "true") {
+                            this.view.showMessage.error("Transaction Not Zero. Please Match More Items.");
+                            this.view.disableBrokerAndTransRef(true);
+                            if (parseFloat(amountRemaining) &lt; 5 &amp;&amp; parseFloat(amountRemaining) > (-5)) {
+                                this.baseModel.set("footerData", this._SAVEJOURNAL.footerData);
+                            }
+                            else {
+                                this.baseModel.set("footerData", this._SAVEJOURNAL_MATCH_MORE_ITEMS);
+                            }
+                        }
+                        else {
+                            this.baseModel.set("footerData", this._SAVEJOURNAL.footerData);
+                        }
+                    } else if (parseFloat(amountRemaining) === 0) {
+                        this.matchedRecordsSave();
+                    }
+                }
+                else if (this.currMode === "ALLOCATE") {
+                    if (this.model.get("amountRemaining") === null) {
+                        //check contition
+                        this.ABORT_SAVE();
+                    }
+                    else if (parseFloat(amountRemaining) !== 0) {
+                        this.baseModel.set("footerData", this._SAVEJOURNAL.footerData);
+                    }
+                    if (parseFloat(amountRemaining) === 0) {
+                        this.matchedRecordsSave();
+                    }
+                }
+
+                else if (this.currMode === "RECEIVED") {
+                    if (this.subMode === "UNCORRELATE") {
+                        this.model.set({ "uncorrelateCollection": this.uncorrelateCollection.models });
+                        if (parseFloat(amountRemaining) !== 0) {
+                            this.baseModel.set("footerData", this._PAID_NO_DETAIL.footerData);
+                        } else {
+                            this.matchedRecordsSave();
+                        }
+                    }
+                    else if (parseFloat(amountRemaining) === 0) {
+                        this.matchedRecordsSave();
+                    }
+                    else if (parseFloat(amountRemaining) !== 0 || this.model.get("amountRemaining") === null) {
+                        this.baseModel.set("footerData", this._SAVEPAID.footerData);
+                    }
+                } else {
+                    this.saveDialogView.hide();
+                    var options = {
+                        "url": "../Matching/ValidateLedgerTranControl",
+                        "type": "PUT",
+                        "onSuccess": _.bind(this.onmatchedRecordsSaveSuccess, this)
+                    };
+                    this.model.save(this.model.attributes, options);
+                }
+            } else {
+                this.view.focusOnInvalidElement();
+            }
+        },
+
+        SaveDifference: function () {
+            this.matchedRecordsSave();
+            this.matchingsDialogView.hide();
+        },
+
+        closeDialogView: function () {
+            if (this.currMode === "VALIDATE") {
+                this.saveDialogView.hide();
+                var options = {
+                    "url": "../Matching/ValidateLedgerTranControl",
+                    "type": "PUT",
+                    "onSuccess": _.bind(this.onValidatePrintSuccess, this, false)
+                };
+                this.model.save(this.model.attributes, options);
+            } else if (this.currMode === "RECEIVED") {
+                this.view.disableAccountChequeValue(false);
+                this.view.selectAccount();
+            }
+        },
+
+        MATCH_MORE_ITEMS: function () {
+            if (this.currMode === "JOURNAL" &amp;&amp; this.model.get("journalYes") &amp;&amp; this.model.get("journalYes") === "true") {
+                this.view.disableBrokerAndTransRef(false);
+                this.view.focusOnBrokerRef();
+                this.baseModel.set("footerData", this._PAID_YES.footerData);
+            }
+            else {
+                this.baseModel.set("footerData", this._SHOW_INQUIRE_ALL.footerData);
+            }
+        },
+
+        DIFFERENCES: function () {
+            this.subMode === "DIFFERENCE";
+            var amtRemaining = this.view.getAmtRemaining();
+            if (this.currMode === "RECEIVED") {
+                amtRemaining = this.model.get("amountRemaining")
+                if (amtRemaining === null) {
+                    this.layout.showMessage.error("Difference Greater Than Authorised");
+                }
+                else {
+                    if (parseFloat(amtRemaining) &lt;= 10 &amp;&amp; parseFloat(amtRemaining) >= -10) {
+                        this.matchingsDialogView.show();
+                    } else {
+                        this.layout.showMessage.error("Difference Greater Than Authorised");
+                    }
+                }
+            }
+            else {
+                if (parseFloat(amtRemaining) &lt;= 10 &amp;&amp; parseFloat(amtRemaining) >= -10) {
+                    this.matchingsDialogView.show();
+                } else {
+                    this.layout.showMessage.error("Difference Greater Than Authorised");
+                }
+            }
+        },
+
+        UNCORRELATE: function () {
+            this.subMode = "UNCORRELATE";
+            this.paginationView.reset();
+            this.collection.reset();
+
+            this.uncorrelateCollection = new MatchingUncorrelateCollection();
+            this.storedUnCorrelateCollection = new MatchingUncorrelateCollection();
+
+            this.uncorrelateView = new MatchingsUncorrelateView({ model: this.model, collection: this.uncorrelateCollection });
+            this.uncorrelateCollectionView = new MatchingsUncorrelateCollectionView({ model: this.model, collection: this.uncorrelateCollection });
+
+            this.uncorrelateCollectionView.actualAmountRemaining = parseFloat(this.model.get("amountRemaining"));
+            this.uncorrelateCollectionView.actualMatchTotal = parseFloat(this.model.get("matchTotal"));
+
+            this.layoutView.gridRegion.empty();
+            this.layoutView.$el.find("#gridRegion").hide();
+            this.layoutView.unCorrelateRegion.show(this.uncorrelateView);
+            this.uncorrelateView.$el.find("#unCorrelateRegionTable").append(this.uncorrelateCollectionView.render().el);
+
+            this.baseModel.set("footerData", this._UNCORRELATE.footerData);
+            this.uncorrelateCollection.add({
+                "debit": "0.00",
+                "credit": "0.00",
+                "account": null,
+                "accountDescription": null,
+                "description": null
+            });
+            this.uncorrelateCollectionView.focusFirstField();
+            this.selectedGridView = this.uncorrelateCollectionView.children.findByIndex(this.uncorrelateCollection.length - 1);
+            this.uncorrelateCollectionView.on("EVT_UNCORRELATE_ACC_NO", _.bind(this.getUnCorrelateAccount, this));
+            this.uncorrelateCollectionView.on("EVT_UNCORRELATE_CALCULATION", _.bind(this.getUnCorrelateCalculation, this));
+
+
+        },
+
+        matchedRecordsSave: function () {
+            this.model.set({ "currMode": this.currMode });
+            var options = {
+                "url": "../Matching/AddMatchingDetails",
+                "type": "POST",
+
+                "onSuccess": _.bind(this.onmatchedRecordsSaveSuccess, this)
+            };
+            this.model.set({ "uncorrelateCollection": this.uncorrelateCollection.models });
+            this.model.set({ "cashReferenceCollection": this.cashReferenceCollection.models });
+            this.model.set({ "matchingDetailsList": this.storedCollection.models });
+            this.model.save(this.model.attributes, options);
+
+        },
+
+        onmatchedRecordsSaveSuccess: function (response) {
+            if (response.success) {
+                this.setCookie("batchNumber", response.batchNumber);
+                this.layout.showMessage.success("Success");
+                this.INIT();
+            } else {
+                this.layout.showMessage.error("Failed");
+                this.view.focusOnInvalidElement();
+            }
+        },
+
+        ABORT_SAVE: function () {
+            var options = {
+                "url": "../Matching/AddTransactionControlForAbort",
+                "type": "POST",
+
+                "onSuccess": _.bind(this.onAbortSaveSuccess, this)
+            };
+
+            this.model.save(this.model.attributes, options);
+        },
+
+        onAbortSaveSuccess: function (response) {
+            if (response.success) {
+                this.INIT();
+            }
+        }
+    });
+
+});
+</code></pre>
+        </article>
+    </section>
+
+
+
+
+</div>
+
+<nav>
+    <h2><a href="index.html">Home</a></h2><h3>Modules</h3><ul><li><a href="module-jsdoc3_amdmodule1.html">jsdoc3/amdmodule1</a></li><li><a href="module-jsdoc3_amdmodule2.html">jsdoc3/amdmodule2</a></li><li><a href="module-jsdoc3_amdmodule3.html">jsdoc3/amdmodule3</a></li><li><a href="module-jsdoc3_amdmodule4.html">jsdoc3/amdmodule4</a></li><li><a href="module-jsdoc3_amdmodule6.html">jsdoc3/amdmodule6</a></li><li><a href="module-jsdoc3_amdmodule51.html">jsdoc3/amdmodule51</a></li><li><a href="module-jsdoc3_amdmodule52.html">jsdoc3/amdmodule52</a></li><li><a href="module-jsdocproj_define1.html">jsdocproj/define1</a></li><li><a href="module-TestModule1.html">TestModule1</a></li><li><a href="module-TestModule2.html">TestModule2</a></li><li><a href="module-TestModule3.html">TestModule3</a></li><li><a href="module-TestModule4.html">TestModule4</a></li><li><a href="module-TestModule6.html">TestModule6</a></li><li><a href="module-TestModule7.html">TestModule7</a></li></ul><h3>Classes</h3><ul><li><a href="class1.html">class1</a></li><li><a href="class2.html">class2</a></li><li><a href="module-jsdoc3_amdmodule3.html">jsdoc3/amdmodule3</a></li><li><a href="NewFunction1.html">NewFunction1</a></li><li><a href="NewFunction2.html">NewFunction2</a></li><li><a href="test1.html">test1</a></li><li><a href="test1sub1.html">test1sub1</a></li><li><a href="test2.html">test2</a></li><li><a href="test11.html">test11</a></li></ul><h3>Tutorials</h3><ul><li><a href="tutorial-newfunction1_tutorial.html">NEW FUNCTION 1 TUTORIAL</a></li><li><a href="tutorial-newfunction2_tutorial.html">NEW FUNCTION 2 TUTORIAL</a></li></ul><h3>Global</h3><ul><li><a href="global.html#var1">var1</a></li><li><a href="global.html#var2">var2</a></li><li><a href="global.html#var3">var3</a></li><li><a href="global.html#var4">var4</a></li></ul>
+</nav>
+
+<br class="clear">
+
+<footer>
+    Documentation generated by <a href="https://github.com/jsdoc3/jsdoc">JSDoc 3.4.0</a> on Tue Mar 29 2016 17:50:22 GMT+0530 (India Standard Time)
+</footer>
+
+<script> prettyPrint(); </script>
+<script src="scripts/linenumber.js"> </script>
+</body>
+</html>

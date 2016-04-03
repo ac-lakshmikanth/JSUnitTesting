@@ -1,0 +1,1005 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <title>JSDoc: Source: ui/js/controller/directdebit/AccountingJournal/AccountingJournalController.js</title>
+
+    <script src="scripts/prettify/prettify.js"> </script>
+    <script src="scripts/prettify/lang-css.js"> </script>
+    <!--[if lt IE 9]>
+      <script src="//html5shiv.googlecode.com/svn/trunk/html5.js"></script>
+    <![endif]-->
+    <link type="text/css" rel="stylesheet" href="styles/prettify-tomorrow.css">
+    <link type="text/css" rel="stylesheet" href="styles/jsdoc-default.css">
+</head>
+
+<body>
+
+<div id="main">
+
+    <h1 class="page-title">Source: ui/js/controller/directdebit/AccountingJournal/AccountingJournalController.js</h1>
+
+    
+
+
+
+    
+    <section>
+        <article>
+            <pre class="prettyprint source linenums"><code>/**
+	* Accounting Journal Controller
+	* This controller provides services to accounting journal screen and it controls views, models associated with it.
+	* @module ui/js/controller/AccountingJournalController
+*/
+define([
+	"underscore",
+	"marionette",
+	"l18n!./nls/AccountJournal",
+	"app/js/models/directdebit/AccountingJournal/AccountingJournalModel",
+	"app/js/models/directdebit/AccountingJournal/AccountingJournalCollection",
+	"app/js/views/directdebit/AccountingJournal/AccountingJournalLayout",
+	"app/js/views/directdebit/AccountingJournal/AccountingJournalView",
+	"app/js/views/directdebit/AccountingJournal/AccountingJournalTotalView",
+	"app/js/views/directdebit/AccountingJournal/AccountingJournalCollectionView",
+	"app/js/views/common/ConfirmationDialog",
+    "app/js/views/directdebit/AccountingJournal/TotalMismatchDialogView"
+], function (
+    _,
+    Marionette,
+    l18n,
+    AccountingJournalModel,
+    AccountingJournalCollection,
+    AccountingJournalLayout,
+    AccountingJournalView,
+    AccountingJournalTotalView,
+    AccountingJournalCollectionView,
+	ConfirmationDialog,
+    TotalMismatchDialogView
+) {
+
+	return Marionette.Controller.extend({
+
+		/** model */
+		model: null,
+
+		view: null,
+
+		footerView: null,
+
+		headerView: null,
+
+		l18n: l18n,
+
+		/** layout */
+		layout: null,
+
+		currMode: null,
+
+		_DEFAULT: {
+			headerData: {
+				"moduleId": "WD_P24",
+				"actionId": "",
+				"moduleName": "Journal/Nominal/Accrual Ledger",
+				"moduleID": "SYSD",
+				"moduleCode": "S0"
+			},
+
+			footerData: {
+                "setPreviousFocus": true,
+				"links": [
+					{
+						"keyAction": "INIT_INSURANCE",
+						"keyPress": "i",
+						"keyTxt": "Insurance"
+					},
+					{
+						"keyAction": "INIT_NOMINAL",
+						"keyPress": "n",
+						"keyTxt": "Nominal"
+					},
+					{
+						"keyAction": "INIT_ACCRUAL",
+						"keyPress": "a",
+						"keyTxt": "Accrual"
+					},
+					{
+						"keyAction": "INIT_CHANGE",
+						"keyPress": "c",
+						"keyTxt": "Change"
+					},
+					{
+						"keyAction": "INIT_PRINT",
+						"keyPress": "p",
+						"keyTxt": "Print"
+					},
+					{
+						"keyAction": "BACK",
+						"keyPress": "f4",
+						"keyTxt": "Back"
+					}
+				]
+			}
+		},
+
+		_INSURANCE: {
+			headerData: {
+				"actionId": "Insurance"
+			},
+			footerData: {
+				links: [
+					{
+						"keyAction": "INSURANCE",
+						"keyPress": "f9",
+						"keyTxt": "Save",
+                        "isPrimary": true
+					},
+					{
+						"keyAction": "INIT",
+						"keyPress": "f4",
+						"keyTxt": "Abort"
+					}
+				]
+			}
+		},
+
+		_NOMINAL: {
+			headerData: {
+				"actionId": "Nominal"
+			},
+			footerData: {
+				links: [
+					{ "keyAction": "NOMINAL", "keyPress": "f9", "keyTxt": "Save", "isPrimary": true },
+					{ "keyAction": "INIT", "keyPress": "f4", "keyTxt": "Abort" }
+				]
+			}
+		},
+
+		_ACCRUAL: {
+			headerData: {
+				"actionId": "Accrual"
+			},
+			footerData: {
+				links: [
+					{ "keyAction": "ACCRUAL", "keyPress": "f9", "keyTxt": "Save", "isPrimary": true },
+					{ "keyAction": "INIT", "keyPress": "f4", "keyTxt": "Abort" }
+				]
+			}
+		},
+
+		_CHANGE: {
+			headerData: {
+				"actionId": "Change"
+			},
+			footerData: {
+				links: [
+					{ "keyAction": "CHANGE", "keyPress": "f9", "keyTxt": "Change", "isPrimary": true },
+					{ "keyAction": "INIT", "keyPress": "f4", "keyTxt": "Abort" }
+				]
+			}
+		},
+
+		_SHOW: {
+		    footerData: {
+		        links: [
+					{ "keyAction": "INIT", "keyPress": "f4", "keyTxt": "Abort" }
+		        ]
+		    }
+		},
+
+		_PRINT: {
+			headerData: {
+				"actionId": "Print"
+			},
+			footerData: {
+				links: [
+					{ "keyAction": "PRINT_Function", "keyPress": "f9", "keyTxt": "Print", "isPrimary": true },
+					{ "keyAction": "INIT", "keyPress": "f4", "keyTxt": "Abort" }
+				]
+			}
+		},
+
+		_TOTAL_MISMATCH_DIALOG: {
+		    footerData: {
+		        "links": [
+                    { "keyAction": "MISMATCH_YES", "keyPress": "y", "keyTxt": "Yes" },
+                    { "keyAction": "MISMATCH_NO", "keyPress": "n", "keyTxt": "No" }
+		        ]
+		    }
+		},
+
+		_PRINT_TEMPLATE: "AccountingJournal",
+
+		/** _initialize */
+		_initialize: function (args) {
+			this.baseModel.set("headerData", this._DEFAULT.headerData);
+			this.baseModel.set("footerData", this._DEFAULT.footerData);
+			this.layout.renderRegions();
+			this.footerView = this.layout.footerView;
+			this.headerView = this.layout.headerView;
+
+			this.model = new AccountingJournalModel(); 
+			this.collection = new AccountingJournalCollection();
+
+			this.layoutView = new AccountingJournalLayout({ model: this.model });
+			this.view = new AccountingJournalView({ model: this.model });
+			this.totalView = new AccountingJournalTotalView({ model: this.model }); 
+			this.collectionView = new AccountingJournalCollectionView({ model: this.model, collection: this.collection });
+			this.saveDialogView = new ConfirmationDialog({
+			    "msg": "Confirm Save!",
+			    "title": "Accounting Journal",
+			    "model": this.baseModel
+			});
+			this.layout.containerRegion.show(this.layoutView);
+
+			this.layout.dialogBoxRegion.show(this.saveDialogView);
+            //JP
+			this.totalMismatchDialogView = new TotalMismatchDialogView({
+                "model": this.model
+			});
+			this.layout.containerRegion.$el.append(this.totalMismatchDialogView.render().el);
+            //JP
+			this.layoutView.dataRegion.show(this.view);
+			this.layoutView.$el.find("#collectionRegion").append(this.collectionView.render().el);
+			this.layoutView.totalRegion.show(this.totalView);			
+			this.initEventBindings();
+			this.INIT();
+		},
+
+		initEventBindings: function () {
+		    this.footerView.on("keyAction", _.bind(this.keyAction, this));
+		    this.layoutView.on("EVT_ADD", _.bind(this.addGridToCollectionView, this));
+		    this.layoutView.on("EVT_REMOVE", _.bind(this.removeGridFromCollectionView, this));
+		    this.collectionView.on("EVT_VALIDATE_ACCOUNT", _.bind(this.getAccountDetails, this));
+		    this.collectionView.on("EVT_VALIDATE_DIVISION", _.bind(this.getDivisionDetails, this));
+		    this.collectionView.on("EVT_ACCRUAL_DUE_DATE", _.bind(this.getAccrualDueDate, this));
+
+		    this.view.on("EVT_FETCH_CURRENCY_DETAILS", _.bind(this.getCurrencyDetails, this));
+		    this.view.on("EVT_FETCH_ACCRUAL_ACCOUNT_DETAILS", _.bind(this.getAccrualAccountDetails, this));
+		    this.view.on("EVT_FETCH_JOURNAL", _.bind(this.getAccountingJournal, this));
+		    this.view.on("EVT_GET_PRINT_DETAILS", _.bind(this.getPrintDetails, this));
+		    //this.saveDialogView.on("confirmDialog", _.bind(this.SAVE, this));
+		    this.saveDialogView.on("confirmDialog", _.bind(this.checkCreditDebitMismatch, this));
+		    this.saveDialogView.on("closeDialog", _.bind(this.onCloseDialog, this));
+		},
+
+		INIT: function () {
+			this.currMode = "INIT";
+			this.baseModel.set("headerData", this._DEFAULT.headerData);
+			this.baseModel.set("footerData", this._DEFAULT.footerData);
+			this.model.reset();
+			this.collection.reset();
+			this.layoutView.showAddBtn(false);
+			this.view.INIT();
+			this.totalView.INIT();
+		},
+
+		INIT_INSURANCE: function () {
+			this.currMode = "INSURANCE";
+			this.baseModel.set("headerData", this._INSURANCE.headerData);
+			this.baseModel.set("footerData", this._INSURANCE.footerData);
+			this.view.INSURANCE();
+			this.layoutView.showAddBtn(true);
+			this.getBatchNumber();
+			this.view.setTransactionReference("JT0001", "JOURNAL TRANSFER");
+			this.getCreateDate();
+			this.addGridToCollectionView("isFirstItem");
+		},
+
+		INIT_NOMINAL: function () {
+			this.currMode = "NOMINAL";
+			this.baseModel.set("headerData", this._NOMINAL.headerData);
+			this.baseModel.set("footerData", this._NOMINAL.footerData);
+			this.view.NOMINAL();
+			this.layoutView.showAddBtn(true);
+			this.getBatchNumber();
+			this.view.setTransactionReference("NL0001", "NOMINAL LEDGER");
+			this.getCreateDate();
+			this.addGridToCollectionView("isFirstItem");
+			//this.model.set({ "currMode": "NOMINAL" });
+		},
+
+		INIT_ACCRUAL: function () {
+			this.currMode = "ACCRUAL";
+			this.baseModel.set("headerData", this._ACCRUAL.headerData);
+			this.baseModel.set("footerData", this._ACCRUAL.footerData);
+			this.view.ACCRUAL();
+			this.layoutView.showAddBtn(true);
+			this.getBatchNumber();
+			this.view.setTransactionReference("NA0001", "NOMINAL ACCRUAL");
+			this.getCreateDate();
+			this.view.setGBPValue();
+			this.view.focusonAccrualAccount();
+			this.addGridToCollectionView("isFirstItem");
+		},
+
+		INIT_CHANGE: function () {
+			this.currMode = "CHANGE";
+			this.baseModel.set("headerData", this._CHANGE.headerData);
+			this.baseModel.set("footerData", this._CHANGE.footerData);
+			this.view.CHANGE();
+			this.layoutView.showAddBtn(false);
+		},
+
+		INIT_PRINT: function () {
+			this.currMode = "PRINT";
+			this.baseModel.set("headerData", this._PRINT.headerData);
+			this.baseModel.set("footerData", this._PRINT.footerData);
+			this.view.PRINT();
+		},
+
+		INSURANCE: function () {
+		    var isMainModelInvalid = this.model.validate(this.model.attributes),
+		        isGridInvalid,
+		        collectionData = [];
+
+		    if (isMainModelInvalid) {
+		        this.layout.focusOnInvalidElement();
+		    } else {
+
+		        _.forEach(this.collectionView.children._views, _.bind(function (gridView, indexId) {
+		            if (gridView.isValid()) {
+		                collectionData.push(gridView.model.attributes);
+		            } else {
+		                isGridInvalid = true;
+		            }
+		        }, this));
+
+		        if (isGridInvalid) {
+		            this.layout.focusOnInvalidElement();
+		        } else {
+		            this.model.set("collectionData", collectionData);
+		            this.saveDialogView.setContent({
+		                "title": l18n.confirmAction,
+		                "msg": this.currMode + ", Confirm SAVE? "
+		            }).show();
+		        }
+		    }		    
+		    
+		},
+
+		NOMINAL: function () {
+		    //this.validate_SAVE();
+		    var isMainModelInvalid = this.model.validate(this.model.attributes),
+		        isGridInvalid,
+		        collectionData = [];
+
+		    if (isMainModelInvalid) {
+		        this.layout.focusOnInvalidElement();
+		    } else {
+
+		        _.forEach(this.collectionView.children._views, _.bind(function (gridView, indexId) {
+		            if (gridView.isValid()) {
+		                collectionData.push(gridView.model.attributes);
+		            } else {
+		                isGridInvalid = true;
+		            }
+		        }, this));
+
+		        if (isGridInvalid) {
+		            this.layout.focusOnInvalidElement();
+		        } else {
+		            this.model.set("collectionData", collectionData);
+		            this.saveDialogView.setContent({
+		                "title": l18n.confirmAction,
+		                "msg": this.currMode + ", Confirm SAVE? "
+		            }).show();
+		        }
+		    }
+		},
+
+		ACCRUAL: function () {
+		    //this.validate_SAVE();
+		    var isMainModelInvalid = this.model.validate(this.model.attributes),
+		        isGridInvalid,
+		        collectionData = [];
+
+		    if (isMainModelInvalid) {
+		        this.layout.focusOnInvalidElement();
+		    } else {
+
+		        _.forEach(this.collectionView.children._views, _.bind(function (gridView, indexId) {
+		            if (gridView.isValid()) {
+		                collectionData.push(gridView.model.attributes);
+		            } else {
+		                isGridInvalid = true;
+		            }
+		        }, this));
+
+		        if (isGridInvalid) {
+		            this.layout.focusOnInvalidElement();
+		        } else {
+		            this.model.set("collectionData", collectionData);
+		            this.saveDialogView.setContent({
+		                "title": l18n.confirmAction,
+		                "msg": this.currMode + ", Confirm SAVE? "
+		            }).show();
+		        }
+		    }
+		},
+
+		MISMATCH_YES: function () {
+		    this.totalMismatchDialogView.hide();
+		    this.SAVE();
+		},
+
+		MISMATCH_NO: function () {
+		    this.totalMismatchDialogView.hide();
+		    this.closeTotalMismatchDialogView();
+		},
+
+
+	    // Print Functionality starts
+		getPrintDetails: function () {
+		    var options = {
+		        "url": "../AccountingJournal/GetGeneralLedgerTranControlDetails",
+		        "data": {
+		            "batchNo": this.view.getBatchNo()
+		        },
+		        "onSuccess": _.bind(this.isPrintDetailsSuccess, this)
+		    };
+		    this.model.fetch(options);
+		},
+
+		isPrintDetailsSuccess: function (response) {
+		    if (response.noData) {
+		        this.view.showMessage.error(l18n.noWorkFile);
+		        this.view.clearBatchNo();
+		        this.view.focusBatchNumber();
+		        this.model.setInvalidModel({ "batchNo": this.view.getBatchNo() }, l18n.noWorkFile);
+		    }
+		},
+
+		PRINT_Function: function () {
+		    var options = {
+		        "url": "../AccountingJournal/PrintGeneralLedgerTranControl",
+		        "type": "PUT",
+		        "onSuccess": _.bind(this.onPrintSaveSuccess, this)
+		    };
+		    this.model.save(this.model.attributes, options);
+		},
+
+		onPrintSaveSuccess: function (response) {
+		    console.log("print update success");
+		    if (response.success) {
+		        this.getAccountingJournalPrintDetails(response.batchNo);
+		    }
+		},
+
+		getAccountingJournalPrintDetails: function (batchNo) {
+		    console.log("Json Data Method is getting called");
+		    var options = {
+		        "url": "../AccountingJournal/getAccountingJournalPrintDetails",
+		        "data": {
+		            "batchNo": batchNo
+		        },
+		        "onSuccess": _.bind(this.onGetAccountingJournalPrintDetails, this)
+		    };
+		    if (options.data.batchNo !== "") {
+		        this.model.fetch(options);
+		    }
+		},
+
+		onGetAccountingJournalPrintDetails: function (response) {
+		    console.log("Json Data Method success");
+		    if (response.success) {
+		        //this.PRINT(this.model.attributes, this._PRINT_TEMPLATE, {});
+		        this.PRINT(response, this._PRINT_TEMPLATE, {});
+		        this.INIT();
+		    }
+		},
+
+	    //Print Functionality ends 
+
+		validate_SAVE: function () {
+		    var isMainModelInvalid = this.model.validate(this.model.attributes),
+		        isGridInvalid,
+		        collectionData = [];
+
+		    if (isMainModelInvalid) {
+		        this.layout.focusOnInvalidElement();
+		    } else {
+
+		        _.forEach(this.collectionView.children._views, _.bind(function (gridView, indexId) {
+		            if (gridView.isValid()) {
+		                collectionData.push(gridView.model.attributes);
+		            } else {
+		                isGridInvalid = true;
+		            }
+		        }, this));
+
+		        if (isGridInvalid) {
+		            this.layout.focusOnInvalidElement();
+		        } else {
+		            this.model.set("collectionData", collectionData);
+		            this.saveDialogView.setContent({
+		                "title": l18n.confirmAction,
+		                "msg": this.currMode + ", Confirm SAVE? "
+		            }).show();
+		        }
+		    }
+		},
+
+		getBatchNumber: function () {
+		    var options = {
+		        "url": "../AccountingJournal/GetAutoSequenceBatchNumber",
+		        "data": {},
+		        "onSuccess": _.bind(this.isGetBatchNumberSuccess, this)
+		    };
+		    this.model.fetch(options);
+		},
+
+		isGetBatchNumberSuccess: function (response) {
+		    if (!response.success) {
+		        this.view.showmessage.error(l18n.invalidBatchNumber)
+		        this.mode.setinvalidmodel({ "batchNo": this.view.getBatchNo() }, l18n.invalidBatchNumber);
+		    }
+
+		},
+
+		getCreateDate: function () {
+		    var options = {
+		        "url": "../AccountingJournal/GetCreateDate",
+		        "data": {},
+		        "onSuccess": _.bind(this.isGetCreateDateSuccess, this)
+		    };
+		    this.model.fetch(options);
+		},
+
+		isGetCreateDateSuccess: function (response) {
+		    this.totalView.setCreateDate(response);          
+		},
+
+		getCurrencyDetails: function () {
+		    var options = {
+		        "url": "../AccountingJournal/GetCurrencyDetails",
+		        "data": {
+		            "currencyCode": this.view.getCurrency()
+		        },
+		        "onSuccess": _.bind(this.isGetCurrencyDetailsSuccess, this)
+		    };
+		    if (options.data.currencyCode !== "") {
+		        this.model.fetch(options);
+		    }
+		},
+
+		isGetCurrencyDetailsSuccess: function (response) {
+		    var currencyCode = this.view.getCurrency();
+		    if (response.currencyId) {
+		        this.model.clearInvalidModel({ "currency": currencyCode });
+		    } else {
+		        this.view.showMessage.error(l18n.invalidCurrency);
+		        this.model.setInvalidModel({ "currency": currencyCode }, l18n.invalidCurrency);
+		    }
+		},
+
+	    //JP Start
+		getAccountDetails: function (selectedGridView, accountNo) {
+		    this.selectedGridView = selectedGridView;
+		    var options = {
+		        "url": "../AccountingJournal/GetAccountDetails",
+		        "data": {
+		            "baseAccNo": accountNo,
+		            "baseOrAccrualType": "BaseAccount",
+		            "transRefNo": this.view.getTransactionReference()
+		        },
+		        "onSuccess": _.bind(this.onGetAccountDetailsSuccess, this)
+		    };
+		    selectedGridView.model.fetch(options);
+		},
+
+		onGetAccountDetailsSuccess: function (response) {		    
+		    if (response.generalLedgerAccountID) {
+		        this.selectedGridView.model.clearInvalidModel("baseAccNo");
+		    } else {
+		        if (this.currMode === "ACCRUAL" || this.currMode === "CHANGE_ACCRUAL") {
+		            this.view.showMessage.error(l18n.invalidXTypeAccount);
+		            this.selectedGridView.model.setInvalidModel("baseAccNo", l18n.invalidXTypeAccount);
+		        } else {
+		        this.view.showMessage.error(l18n.invalidAccount);
+		        this.selectedGridView.model.setInvalidModel("baseAccNo", l18n.invalidAccount);
+		        }
+		    }
+		},
+
+		getAccrualAccountDetails: function () {		    
+		    var options = {
+		        "url": "../AccountingJournal/GetAccountDetails",
+		        "data": {
+		            "baseAccNo": this.view.getAccrualAccount(),
+		            "baseOrAccrualType": "AccrualAccount",
+		            "transRefNo": this.view.getTransactionReference()
+		        },
+		        "onSuccess": _.bind(this.onGetAccrualAccountDetailsSuccess, this)
+		    };
+		    this.model.fetch(options);
+		},
+
+		onGetAccrualAccountDetailsSuccess: function (response) {
+		    if (response.accrualAcId) {
+		        this.model.clearInvalidModel("accrualAcNo");
+		    } else {
+		        this.view.showMessage.error(l18n.invalidAccount);
+		        this.model.setInvalidModel("accrualAcNo", l18n.invalidAccount);
+		    }
+		},
+
+		getDivisionDetails: function (selectedGridView, divisionCode) {
+		    this.selectedGridView = selectedGridView;
+		    var options = {
+		        "url": "../AccountingJournal/GetDivision",
+		        "data": {
+		            "divisionCode": divisionCode
+		        },
+		        "onSuccess": _.bind(this.onDivisionDetailsSuccess, this)
+		    };		    
+		    this.selectedGridView.model.fetch(options);
+		},
+
+		onDivisionDetailsSuccess: function (response) {
+		    if (response.divisionID) {
+		        this.selectedGridView.model.clearInvalidModel("divCode");
+		    } else {
+		        this.view.showMessage.error(l18n.invalidDivision);
+		        this.selectedGridView.model.setInvalidModel("divCode", l18n.invalidDivision);
+		        //this.view.clearDivisionCode();
+		        //this.view.focusDivisionCode();
+		    }
+		},
+
+		getAccrualDueDate: function (selectedGridView) {
+		    this.selectedGridView = selectedGridView;
+		    var options = {
+		        "url": "../AccountingJournal/GetAccrualDueDate",
+		        "data": {		            
+		        },
+		        "onSuccess": _.bind(this.onAccrualDueDateSuccess, this)
+		    };
+		    this.model.fetch(options);
+		},
+
+		onAccrualDueDateSuccess: function (response) {
+		    if (response.success) {
+		        this.selectedGridView.model.set("dueDate", response.dueDate);
+		        this.selectedGridView.model.clearInvalidModel("dueDate");
+		        this.selectedGridView.setAccrualDueDate();
+		    } else {
+		        this.view.showMessage.error(l18n.invalidDivision);
+		        this.selectedGridView.model.setInvalidModel("dueDate", l18n.invalidDivision);
+		        //this.view.clearDivisionCode();
+		        //this.view.focusDivisionCode();
+		    }
+		},
+
+		getAccountingJournal: function () {
+		    var options = {
+		        "url": "../AccountingJournal/GetJournal",
+		        "data": {
+		            "batchNo": this.view.getBatchNo(),
+		            "transRef": this.view.getTransactionReference()
+		        },
+		        "onSuccess": _.bind(this.onGetJournalSuccess, this)
+		    };
+		    if (options.data.batchNo !== "" &amp;&amp; options.data.transRef !== "") {
+		        this.model.fetch(options);
+		    }
+		},
+
+		onGetJournalSuccess: function (response) {
+		    var selectedGridView = null,
+		        firstGrdiView = null;
+		    if (response.success) {
+		        this.model.clearInvalidModel("batchNo");
+		        this.model.clearInvalidModel("transRef");
+
+		        this.view.disablefieldsOnChange(true);
+
+		        this.view.setTransactionReferenceForChange();
+		        //transactionReference = this.model.get("transRef") + "0";
+		        //this.model.set("transRef", transactionReference);
+
+		        this.collection.reset();
+		        _.forEach(response.collectionData, _.bind(function (gridData, indexId) {
+		            gridData.initialCreditVal = parseFloat(gridData.credit);
+		            gridData.initialDebitVal = parseFloat(gridData.debit);
+		            this.collection.add(gridData);
+		            this.currMode = gridData.currMode;
+
+		            //JP
+		            //this.collectionView.initialCreditVal = parseFloat(gridData.credit);
+		            //this.collectionView.initialDebitVal = parseFloat(gridData.debit);
+		            //JP
+
+		            selectedGridView = this.collectionView.children.findByIndex(indexId);
+		            selectedGridView[gridData.currMode]();
+		        }, this));        		        
+
+		        if (this.currMode === "CHANGE_ACCRUAL") {
+		            if (response.isAccrualRecord === true) {
+		                this.collectionView.children.findByIndex(this.collection.models.length - 1).disableForm(true);
+		                this.view.disableAccrualAccount(true);	                
+
+		                this.view.showMessage.error(l18n.forbiddenChangeForAccrual);
+		                this.baseModel.set("footerData", this._SHOW.footerData);
+		                this.layout.footerView.focusFirstButton();
+		            } else {
+		                _.forEach(response.collectionData, _.bind(function (gridData, indexId) {
+		                    selectedGridView = this.collectionView.children.findByIndex(indexId);
+		                    selectedGridView.disableDueDate(true);
+		                }, this));
+
+		                this.collectionView.children.findByIndex(this.collection.models.length - 1).disableForm(true);
+		                this.view.disableAccrualAccount(false);
+		                this.view.focusAccrualAccount();
+		            }
+		        }
+                else {
+		            this.collectionView.children.findByIndex(0).focusOnFirstElement();
+		        }
+		    } else {
+		        if (response.diffTransRef === true) {
+		            this.view.showMessage.error(l18n.transRefMismatch);
+		            this.model.setInvalidModel("transRef", l18n.transRefMismatch);
+		        } else if (response.transactionNotFound === true) {
+		            this.view.showMessage.error(l18n.transactionNotFound);
+		            this.model.setInvalidModel("transRef", l18n.transactionNotFound);
+		        } else {
+		        this.view.showMessage.error(l18n.invalidBatchNo);
+		        this.model.setInvalidModel("batchNo", l18n.invalidBatchNo);
+		        }
+		    }
+		},
+        //JP End
+
+		CHANGE: function () {
+		    this.validate_SAVE();
+		},
+
+		removeGridFromCollectionView: function () {
+		    App.keypress.focusNext("removeBtn");// Do the focus first.. then continue to remove the elements
+		    this.layoutView.showRemoveBtn(false); //Delete should be pressed once.
+		    this.collection.pop();
+		    this.collectionView.setTotalDebitCredit();
+		   
+		    if (this.collection.models.length &lt;= 1) {
+		        this.layoutView.showRemoveBtn(false);
+		    }
+		},
+
+		addGridToCollectionView: function (isFirstItem) {
+		    // validate the current grid data when trying to add next grid row
+		    if (!this.validateCurrentGridData()) return false;
+
+		    var collectionSize = this.collection.models.length,
+                prevModel = null,
+                prevDivCode = null,
+                prevEmployee = null,
+                prevInfoValue = null,
+		        prevAccountNo = null,
+                prevAccountDesc = null;
+
+            // get prvious grid row value
+		    if (collectionSize) {
+		        prevModel = this.collection.models[collectionSize - 1];
+		        if (this.currMode === "INSURANCE") { 
+		            prevInfoValue = prevModel.get("info");
+		            prevAccountNo = prevModel.get("baseAccNo");
+		            prevAccountDesc = prevModel.get('baseShortName');
+                }
+                // accrual mode
+		        if (this.currMode === "NOMINAL" || this.currMode === "ACCRUAL") {
+                    prevDivCode = prevModel.get('divCode');
+                    prevEmployee = prevModel.get('employee');
+                    prevAccountNo = prevModel.get('baseAccNo');
+                    prevInfoValue = prevModel.get('info');
+                    prevAccountDesc = prevModel.get('baseShortName');
+                }
+            }
+
+		    this.collectionView.disableForm(true); //Disable all previously added rows.
+		    this.collectionView.setCurrentMode(this.currMode);
+		    this.collection.add({
+		        "generalLedgerWorkDetailID": null,
+		        "divCode": prevDivCode,
+		        "divisionID": null,
+		        "now": null,
+		        "employee": prevEmployee,
+		        "generalLedgerAccountID": null,
+		        "baseAccNo": prevAccountNo,
+		        "baseShortName": prevAccountDesc,
+		        "debit": 0,
+		        "credit": 0,
+		        "info": prevInfoValue,		        
+		        "dueDate": null,
+		        "createdId": null,
+		        "createdDt": null,
+		        "currMode": this.currMode,
+		        "timeStamp": null
+		    });
+		    this.selectedGridView = this.collectionView.children.findByIndex(this.collection.length - 1);
+		    //this.selectedGridView.INSURANCE(isFirstItem);
+		    if (this.currMode === "INSURANCE") {
+		        this.selectedGridView.INSURANCE(isFirstItem);
+		    }
+		    else if (this.currMode === "NOMINAL") {
+		        this.selectedGridView.NOMINAL(isFirstItem);                
+		    }
+		    else if (this.currMode === "ACCRUAL") {
+		        this.selectedGridView.ACCRUAL(isFirstItem);
+		    }
+
+		    if (!isFirstItem) {
+		        this.layoutView.showRemoveBtn(true); //show the Delete btn again for the newly added row.
+		    } else {
+		        this.layoutView.showRemoveBtn(false);
+		    }
+		     
+		},
+
+		validateCurrentGridData: function () {
+		    // case: if models exist
+		    if (this.collection.models.length) {
+		        var currGridModel  = this.collection.at(this.collection.models.length - 1),
+                    collectionViews = this.collectionView.children,
+		            currGridView = collectionViews.findByIndex(collectionViews.length - 1);
+
+		        currGridView.validateCredit();
+		        if (!currGridModel.validate(currGridModel.attributes)) {
+		            return true;
+		        } else {
+		            currGridView.focusOnInvalidElement();
+		            return false;
+		        }
+		    }
+
+            // return true when no grid rows are added
+		    return true;
+		},
+
+		keyAction: function (actionId, evt) {
+			this[actionId]();
+		},
+
+		BACK: function () {
+			this.baseModel.router.goBackToUrl("home/direct_debit");
+		},
+
+		//validate_SAVE: function () {
+	    //    if (!this.model.validate(this.model.attributes)) {
+	    //        this.saveDialogView.setContent({
+	    //            "title": l18n.confirmAction,
+	    //            "msg": "Confirm SAVE?"
+	    //        }).show();
+	    //    } else {
+	    //        this.layout.focusOnInvalidElement();
+	    //    }
+	    //},
+
+		checkCreditDebitMismatch: function () {
+		    var totalDebits = this.model.get("totalDebits");
+		    var totalCredits = this.model.get("totalCredits");
+
+		    if (this.currMode === "ACCRUAL" || this.currMode === "CHANGE_ACCRUAL") {
+		        this.SAVE();
+		    } else {
+		        if (totalDebits === totalCredits) {
+		            this.SAVE();
+		        } else {
+		            this.continue_TotalMismatch();
+		        }
+		    }
+
+		},
+
+		continue_TotalMismatch: function () {
+		    this.saveDialogView.hide();
+		    this.totalMismatchDialogView.setContent({
+		        "title": l18n.confirmationTitle,
+		        "msg": l18n.TOTAL_MISMATCH_msg
+		    }).show(this._TOTAL_MISMATCH_DIALOG, function () {
+                //anything after dialog box appears
+		    });
+		},
+
+		SAVE: function () { 
+		    var options = {
+		        "onSuccess": _.bind(this.onSaveSuccess, this)
+		    };
+
+	        switch (this.currMode) {
+	            case "INSURANCE":
+	                options.url = "../AccountingJournal/AddJournal";
+	                options.type = "POST";
+	                break;
+	            case "NOMINAL":
+	                //options.url = "../AccountingJournal/AddJournal";
+	                options.url = "../AccountingJournal/AddJournalNominal";
+	                options.type = "POST";
+	                break;
+	            case "ACCRUAL":
+	                //options.url = "../AccountingJournal/AddJournal";
+	                options.url = "../AccountingJournal/AddJournalAccrual";
+	                options.type = "POST";
+	                break;	            
+	            case "CHANGE_INSURANCE":
+	                options.url = "../AccountingJournal/UpdateJournal";
+	                options.type = "PUT";
+	                break;
+	            case "CHANGE_NOMINAL":
+	                options.url = "../AccountingJournal/UpdateJournal";
+	                options.type = "PUT";
+	                break;
+	            case "CHANGE_ACCRUAL":
+	                options.url = "../AccountingJournal/UpdateJournal";
+	                options.type = "PUT";
+	                break;
+	        }	        
+	        this.model.save(this.model.attributes, options);
+	    },
+
+	    onSaveSuccess: function (response) {
+	        //this.prevMode = this.currMode;
+	        this.saveDialogView.hide();
+	        if (response &amp;&amp; response.success) {
+	            switch (this.currMode) {
+	                case "INSURANCE":
+	                    this.INIT();
+	                    //this.INIT_INSURANCE();
+	                    break;
+	                case "NOMINAL":
+	                    this.INIT();
+	                    //this.INIT_NOMINAL();
+	                    break;
+	                case "ACCRUAL":
+	                    this.INIT();
+	                    //this.INIT_ACCRUAL();
+	                    break;
+	                case "CHANGE_INSURANCE":
+	                    this.INIT();
+	                    this.INIT_CHANGE();
+	                    break;
+	                case "CHANGE_NOMINAL":
+	                    this.INIT();
+	                    this.INIT_CHANGE();
+	                    break;
+	                case "CHANGE_ACCRUAL":
+	                    this.INIT();
+	                    this.INIT_CHANGE();
+	                    break;	                	                
+	                default:
+	                    this.INIT();
+	            }
+	        }
+	    },
+
+	    onCloseDialog: function () {	        
+	        this.layout.focusBackonElement();	        
+	    },
+
+	    closeTotalMismatchDialogView: function () {
+	        this.layout.focusBackonElement();
+	    }
+
+	});
+});</code></pre>
+        </article>
+    </section>
+
+
+
+
+</div>
+
+<nav>
+    <h2><a href="index.html">Home</a></h2><h3>Modules</h3><ul><li><a href="module-jsdoc3_amdmodule1.html">jsdoc3/amdmodule1</a></li><li><a href="module-jsdoc3_amdmodule2.html">jsdoc3/amdmodule2</a></li><li><a href="module-jsdoc3_amdmodule3.html">jsdoc3/amdmodule3</a></li><li><a href="module-jsdoc3_amdmodule4.html">jsdoc3/amdmodule4</a></li><li><a href="module-jsdoc3_amdmodule6.html">jsdoc3/amdmodule6</a></li><li><a href="module-jsdoc3_amdmodule51.html">jsdoc3/amdmodule51</a></li><li><a href="module-jsdoc3_amdmodule52.html">jsdoc3/amdmodule52</a></li><li><a href="module-jsdocproj_define1.html">jsdocproj/define1</a></li><li><a href="module-TestModule1.html">TestModule1</a></li><li><a href="module-TestModule2.html">TestModule2</a></li><li><a href="module-TestModule3.html">TestModule3</a></li><li><a href="module-TestModule4.html">TestModule4</a></li><li><a href="module-TestModule6.html">TestModule6</a></li><li><a href="module-TestModule7.html">TestModule7</a></li><li><a href="module-ui_js_controller_AccountingJournalController.html">ui/js/controller/AccountingJournalController</a></li></ul><h3>Classes</h3><ul><li><a href="class1.html">class1</a></li><li><a href="class2.html">class2</a></li><li><a href="module-jsdoc3_amdmodule3.html">jsdoc3/amdmodule3</a></li><li><a href="NewFunction1.html">NewFunction1</a></li><li><a href="NewFunction2.html">NewFunction2</a></li><li><a href="test1.html">test1</a></li><li><a href="test1sub1.html">test1sub1</a></li><li><a href="test2.html">test2</a></li><li><a href="test11.html">test11</a></li></ul><h3>Tutorials</h3><ul><li><a href="tutorial-newfunction1_tutorial.html">NEW FUNCTION 1 TUTORIAL</a></li><li><a href="tutorial-newfunction2_tutorial.html">NEW FUNCTION 2 TUTORIAL</a></li></ul><h3>Global</h3><ul><li><a href="global.html#var1">var1</a></li><li><a href="global.html#var2">var2</a></li><li><a href="global.html#var3">var3</a></li><li><a href="global.html#var4">var4</a></li></ul>
+</nav>
+
+<br class="clear">
+
+<footer>
+    Documentation generated by <a href="https://github.com/jsdoc3/jsdoc">JSDoc 3.4.0</a> on Tue Mar 29 2016 17:49:55 GMT+0530 (India Standard Time)
+</footer>
+
+<script> prettyPrint(); </script>
+<script src="scripts/linenumber.js"> </script>
+</body>
+</html>
